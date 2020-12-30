@@ -10,6 +10,7 @@ from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 
 # The device connection string to authenticate the device with your IoT hub.
 CONNECTION_STRING = "HostName=iothubbyaugusto.azure-devices.net;DeviceId=device1;SharedAccessKey=bGyzWD5D04IOJDSiRK13tYHizgrMqBFa+MfwEB+eauo=;GatewayHostName=raspberrypi"
+camera_instance = PiCamera()
 
 def iothub_client_init():
     # Create an IoT Hub client
@@ -25,7 +26,7 @@ def device_method_listener(device_client):
                 #Example how to read the payload content
                 #payload = method_request.payload
                 
-                take_picture()
+                take_picture(camera_instance)
                 send_telemetry(device_client)
             except ValueError:
                 response_payload = {"Response": "Invalid parameter"}
@@ -44,6 +45,9 @@ def main():
     try:
         # establish device connection
         client = iothub_client_init()
+
+        # set camera properties
+        camera_instance.rotation = 180
 
         # Start a thread to listen 
         device_method_thread = threading.Thread(target=device_method_listener, args=(client,))
@@ -81,13 +85,10 @@ def send_telemetry(device_client):
     except Exception as ex:
         print("Exception to send telemetry: %s" % ex)
 
-def take_picture():
+def take_picture(camera_instance):
         
-    try:
-        camera = PiCamera()
-        camera.rotation = 180
-
-        camera.start_preview()
+    try:        
+        camera_instance.start_preview()
 
         time.sleep(2) #warmup the camera
         current_date_and_time = datetime.datetime.now()
@@ -95,9 +96,9 @@ def take_picture():
         extension = '.jpg'
         path = '/home/pi/workspace/images/unknown/'
         file_name = path + current_date_and_time_string + extension
-        camera.capture(file_name)
+        camera_instance.capture(file_name)
 
-        camera.stop_preview()
+        camera_instance.stop_preview()
 
         print('picture filename: ' + file_name)
         print('\n')
