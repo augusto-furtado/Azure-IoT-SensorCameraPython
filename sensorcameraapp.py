@@ -5,6 +5,8 @@ import random
 import time
 import threading
 import datetime
+import os
+import RPi.GPIO as GPIO
 from picamera import PiCamera
 from azure.iot.device import IoTHubDeviceClient, Message, MethodResponse
 
@@ -44,21 +46,43 @@ def device_method_listener(device_client):
 def main():
     try:
         # establish device connection
-        client = iothub_client_init()
+        iothub_client = iothub_client_init()
+
+        #set gpio pin for touch sensor
+        gpio_touch_sensor = 17
 
         # set camera properties
         camera_instance.rotation = 180
 
-        # Start a thread to listen 
-        device_method_thread = threading.Thread(target=device_method_listener, args=(client,))
+        # Start a thread to listen iot hub direct method call
+        device_method_thread = threading.Thread(target=device_method_listener, args=(iothub_client,))
         device_method_thread.daemon = True
         device_method_thread.start()
+
+        # Start a thread to listen touch sensor 
+        touch_sensor_thread = threading.Thread(target=touch_sensor_listener, args=(iothub_client, gpio_touch_sensor,))
+        touch_sensor_thread.daemon = True
+        touch_sensor_thread.start()
 
         while True:
             time.sleep(10)
             print(".")
     except KeyboardInterrupt:
         print ( "App stopped" )
+
+def touch_sensor_listener(device_client, gpio_pin):
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(gpio_pin, GPIO.IN,pull_up_down=GPIO.PUD_UP)
+
+    while True:
+        if (GPIO.input(gpio_pin) == True):
+            print ('pressed')
+            try:
+                take_picture(camera_instance)
+                send_telemetry(device_client)
+            except Exception as ex:
+                print("Exception: %s" % ex) 
+        time.sleep(2)
 
 def send_telemetry(device_client):
 

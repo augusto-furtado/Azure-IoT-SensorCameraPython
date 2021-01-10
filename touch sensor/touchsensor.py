@@ -4,8 +4,6 @@
 
 import os
 from time import sleep
-import random
- 
 import RPi.GPIO as GPIO
  
 GPIO.setmode(GPIO.BCM)
